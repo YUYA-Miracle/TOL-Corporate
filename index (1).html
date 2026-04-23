@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToL — Technology of Life</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Jost:wght@200;300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─── */
+:root {
+  --ink:    #0a0a0a;
+  --paper:  #f5f2ec;
+  --warm:   #ede8df;
+  --gold:   #b8923a;
+  --smoke:  #5a5a5a;
+  --ghost:  rgba(10,10,10,0.06);
+  --line:   rgba(10,10,10,0.12);
+  --serif:  'Playfair Display', Georgia, serif;
+  --sans:   'Jost', sans-serif;
+  --mono:   'DM Mono', monospace;
+}
+
+/* ─── RESET ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  line-height: 1.7;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ─── CUSTOM CURSOR ─── */
+.cursor {
+  position: fixed; pointer-events: none; z-index: 9999;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold); transform: translate(-50%, -50%);
+  transition: transform 0.15s, width 0.3s, height 0.3s, background 0.3s;
+  mix-blend-mode: multiply;
+}
+.cursor.hover {
+  width: 48px; height: 48px;
+  background: rgba(184,146,58,0.15);
+}
+.cursor-ring {
+  position: fixed; pointer-events: none; z-index: 9998;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(184,146,58,0.4);
+  transform: translate(-50%, -50%);
+  transition: transform 0.4s cubic-bezier(.16,1,.3,1), opacity 0.3s;
+}
+
+/* ─── PAGES ─── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 48px;
+  mix-blend-mode: multiply;
+  transition: padding 0.4s;
+}
+nav.dark {
+  mix-blend-mode: normal;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 16px 48px;
+}
+.nav-logo {
+  font-family: var(--serif); font-size: 1.5rem; font-weight: 400;
+  letter-spacing: 0.1em; color: var(--ink); text-decoration: none; cursor: none;
+  position: relative; z-index: 2;
+}
+.nav-logo .dot { color: var(--gold); }
+nav.dark .nav-logo { color: #f5f2ec; }
+
+.nav-center {
+  display: flex; gap: 44px; list-style: none;
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
+.nav-center a {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--smoke); text-decoration: none;
+  cursor: none; transition: color 0.3s; position: relative;
+}
+.nav-center a::after {
+  content: ''; position: absolute; bottom: -3px; left: 0; right: 0;
+  height: 1px; background: var(--gold); transform: scaleX(0); transition: transform 0.3s;
+}
+.nav-center a:hover::after, .nav-center a.active::after { transform: scaleX(1); }
+.nav-center a:hover, .nav-center a.active { color: var(--ink); }
+nav.dark .nav-center a { color: rgba(245,242,236,0.5); }
+nav.dark .nav-center a:hover, nav.dark .nav-center a.active { color: #f5f2ec; }
+
+.nav-right {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink); cursor: none;
+  background: none; border: 1px solid var(--line); padding: 9px 22px;
+  transition: all 0.3s;
+}
+.nav-right:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+nav.dark .nav-right { color: var(--paper); border-color: rgba(245,242,236,0.25); }
+nav.dark .nav-right:hover { background: var(--paper); color: var(--ink); }
+
+/* HAMBURGER */
+.hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  cursor: none; background: none; border: none; padding: 4px; z-index: 2;
+}
+.hamburger span { display: block; width: 22px; height: 1px; background: var(--ink); transition: all 0.3s; }
+nav.dark .hamburger span { background: var(--paper); }
+.hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* MOBILE MENU */
+.mob-menu {
+  display: none; position: fixed; inset: 0; z-index: 490;
+  background: var(--ink); flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  padding: 80px 48px 64px;
+}
+.mob-menu.open { display: flex; }
+.mob-menu a {
+  font-family: var(--serif); font-size: clamp(2.4rem, 8vw, 4.5rem);
+  font-weight: 400; color: rgba(245,242,236,0.2); text-decoration: none;
+  cursor: none; transition: color 0.3s; line-height: 1.15;
+}
+.mob-menu a:hover { color: var(--paper); }
+.mob-divider { width: 40px; height: 1px; background: var(--gold); margin: 32px 0; }
+.mob-cta {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ink); background: var(--gold);
+  border: none; padding: 14px 36px; cursor: none; margin-top: 8px;
+}
+
+/* ══════════════════════════════════════════
+   HOME PAGE
+══════════════════════════════════════════ */
+
+/* HERO — full bleed, text overlapping photo */
+.hero {
+  height: 100vh; min-height: 680px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  position: relative; overflow: hidden;
+}
+.hero-left {
+  background: var(--paper);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 64px 80px;
+  position: relative; z-index: 2;
+}
+.hero-eyebrow {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.4em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 24px;
+  opacity: 0; animation: slideRight 0.7s 0.4s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero-h1 {
+  font-family: var(--serif); font-size: clamp(3rem, 5.5vw, 5.5rem);
+  font-weight: 400; line-height: 1.03; letter-spacing: -0.02em; color: var(--ink);
+  margin-bottom: 36px;
+  opacity: 0; animation: slideRight 0.8s 0.6s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero-h1 em { font-style: italic; }
+.hero-sub {
+  font-size: 0.88rem; color: var(--smoke); max-width: 360px; line-height: 1.9;
+  margin-bottom: 48px;
+  opacity: 0; animation: slideRight 0.8s 0.8s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero-actions {
+  display: flex; gap: 20px; align-items: center;
+  opacity: 0; animation: slideRight 0.8s 1s cubic-bezier(.16,1,.3,1) forwards;
+}
+.btn-primary {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.18em;
+  text-transform: uppercase; background: var(--ink); color: var(--paper);
+  border: none; padding: 14px 36px; cursor: none; transition: all 0.3s;
+}
+.btn-primary:hover { background: var(--gold); }
+.btn-text {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--smoke); background: none; border: none;
+  cursor: none; display: flex; align-items: center; gap: 10px; transition: color 0.3s;
+}
+.btn-text::after { content: '↗'; transition: transform 0.3s; }
+.btn-text:hover { color: var(--gold); }
+.btn-text:hover::after { transform: translate(3px,-3px); }
+
+.hero-right {
+  position: relative; overflow: hidden;
+}
+.hero-img {
+  position: absolute; inset: 0;
+  background: url('https://images.unsplash.com/photo-1518770660439-4636190af475?w=1400&q=85&fit=crop') center/cover;
+  filter: saturate(0.6) brightness(0.88);
+  transform: scale(1.04);
+  animation: slowZoom 12s ease-out forwards;
+}
+.hero-num {
+  position: absolute; bottom: 40px; right: 40px; z-index: 2;
+  font-family: var(--serif); font-size: 7rem; font-weight: 400;
+  color: rgba(245,242,236,0.12); line-height: 1; pointer-events: none;
+  opacity: 0; animation: fadeIn 1s 1.4s forwards;
+}
+.hero-scroll {
+  position: absolute; bottom: 40px; left: 64px; z-index: 2;
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--smoke);
+  opacity: 0; animation: fadeIn 1s 1.6s forwards;
+}
+.hero-scroll-line {
+  width: 36px; height: 1px; background: var(--gold);
+  animation: pulse-line 2.5s 2s infinite;
+}
+
+/* MARQUEE */
+.marquee-wrap {
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  overflow: hidden; padding: 16px 0; background: var(--ink);
+}
+.marquee-track {
+  display: flex; gap: 0; white-space: nowrap;
+  animation: marquee 20s linear infinite;
+}
+.marquee-item {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: rgba(245,242,236,0.35);
+  padding: 0 48px; flex-shrink: 0;
+}
+.marquee-item span { color: var(--gold); margin: 0 12px; }
+
+/* INTRO SECTION */
+.intro {
+  display: grid; grid-template-columns: 1fr 2fr;
+  padding: 120px 48px; gap: 80px; align-items: start;
+  border-bottom: 1px solid var(--line);
+}
+.intro-label {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.35em;
+  text-transform: uppercase; color: var(--gold); padding-top: 8px;
+  position: sticky; top: 120px;
+}
+.intro-body {}
+.intro-lead {
+  font-family: var(--serif); font-size: clamp(1.8rem, 3.2vw, 3rem);
+  font-weight: 400; line-height: 1.25; color: var(--ink); margin-bottom: 40px;
+}
+.intro-lead em { font-style: italic; }
+.intro-text {
+  font-size: 0.9rem; color: var(--smoke); line-height: 2; max-width: 560px;
+}
+
+/* EDITORIAL GRID */
+.ed-grid {
+  display: grid; grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: auto; gap: 1px;
+  background: var(--line);
+  border-top: 1px solid var(--line);
+}
+.ed-cell { background: var(--paper); }
+
+/* Big feature */
+.ed-feature {
+  grid-column: 1 / 8; grid-row: 1 / 3;
+  position: relative; overflow: hidden; aspect-ratio: 4/3;
+}
+.ed-feature img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(0.55) brightness(0.82);
+  transition: transform 0.8s cubic-bezier(.16,1,.3,1), filter 0.5s;
+}
+.ed-feature:hover img { transform: scale(1.04); filter: saturate(0.7) brightness(0.9); }
+.ed-feature-caption {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 40px;
+  background: linear-gradient(to top, rgba(10,10,10,0.75) 0%, transparent 55%);
+}
+.ed-feature-num {
+  font-family: var(--serif); font-size: 5rem; font-weight: 400;
+  color: rgba(245,242,236,0.15); line-height: 1; margin-bottom: 8px;
+}
+.ed-feature-title {
+  font-family: var(--serif); font-size: 1.8rem; font-weight: 400;
+  color: var(--paper); line-height: 1.2; margin-bottom: 10px;
+}
+.ed-feature-title em { font-style: italic; }
+.ed-feature-tag {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--gold);
+}
+
+/* Side cards */
+.ed-side { grid-column: 8 / 13; overflow: hidden; position: relative; }
+.ed-side-1 { grid-row: 1 / 2; aspect-ratio: 16/9; }
+.ed-side-2 { grid-row: 2 / 3; aspect-ratio: 16/9; }
+.ed-side img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(0.5) brightness(0.8);
+  transition: transform 0.8s cubic-bezier(.16,1,.3,1), filter 0.5s;
+}
+.ed-side:hover img { transform: scale(1.05); filter: saturate(0.7) brightness(0.9); }
+.ed-side-caption {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 28px;
+  background: linear-gradient(to top, rgba(10,10,10,0.7) 0%, transparent 55%);
+}
+.ed-side-title {
+  font-family: var(--serif); font-size: 1.2rem; color: var(--paper); line-height: 1.3;
+}
+.ed-side-tag {
+  font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 6px;
+}
+
+/* Text cell */
+.ed-text {
+  grid-column: 1 / 5; padding: 48px;
+  border-top: 1px solid var(--line);
+}
+.ed-text-num {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.2em;
+  color: var(--gold); margin-bottom: 16px;
+}
+.ed-text-title {
+  font-family: var(--serif); font-size: 1.5rem; font-weight: 400;
+  line-height: 1.3; color: var(--ink); margin-bottom: 14px;
+}
+.ed-text-body { font-size: 0.82rem; color: var(--smoke); line-height: 1.85; }
+.ed-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; }
+.ed-tag {
+  font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
+  border: 1px solid var(--line); padding: 4px 10px; color: var(--smoke);
+}
+
+.ed-text-2 { grid-column: 5 / 9; padding: 48px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.ed-text-3 { grid-column: 9 / 13; padding: 48px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+
+/* STATEMENT */
+.statement {
+  padding: 120px 48px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  background: var(--ink); color: var(--paper);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.statement-left { padding-right: 80px; border-right: 1px solid rgba(255,255,255,0.08); }
+.statement-right { padding-left: 80px; display: flex; flex-direction: column; justify-content: flex-end; }
+.statement-quote {
+  font-family: var(--serif); font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  font-weight: 400; line-height: 1.25; color: var(--paper); margin-bottom: 40px;
+}
+.statement-quote em { font-style: italic; color: var(--gold); }
+.statement-attr {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.25em;
+  text-transform: uppercase; color: rgba(245,242,236,0.4);
+}
+.statement-img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  filter: saturate(0.4) brightness(0.7); margin-bottom: 40px;
+}
+.statement-text { font-size: 0.85rem; color: rgba(245,242,236,0.5); line-height: 2; }
+
+/* CTA STRIP */
+.cta-strip {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 80px 48px; gap: 60px;
+  background: var(--warm); border-top: 1px solid var(--line);
+}
+.cta-strip-bg {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 45%;
+  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=80&fit=crop') center/cover;
+  filter: saturate(0.3) brightness(0.6) opacity(0.25);
+}
+.cta-strip-text { position: relative; z-index: 1; max-width: 500px; }
+.cta-strip-title {
+  font-family: var(--serif); font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 400; line-height: 1.2; color: var(--ink); margin-bottom: 12px;
+}
+.cta-strip-title em { font-style: italic; }
+.cta-strip-sub { font-size: 0.86rem; color: var(--smoke); }
+.cta-strip-btn { position: relative; z-index: 1; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════
+   SERVICE PAGE
+══════════════════════════════════════════ */
+.svc-hero {
+  height: 65vh; min-height: 500px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+.svc-hero-img {
+  background: url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&q=85&fit=crop') center/cover;
+  filter: saturate(0.5) brightness(0.75);
+}
+.svc-hero-text {
+  background: var(--ink);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 64px;
+}
+.svc-hero-text .section-label { color: var(--gold); margin-bottom: 20px; }
+.svc-hero-text .page-title { color: var(--paper); }
+
+.svc-list { border-top: 1px solid var(--line); }
+.svc-row {
+  display: grid; grid-template-columns: 80px 1fr 1.4fr 240px;
+  gap: 0; border-bottom: 1px solid var(--line);
+  transition: background 0.3s;
+}
+.svc-row:hover { background: var(--warm); }
+.svc-row-num {
+  font-family: var(--serif); font-size: 2.5rem; font-weight: 400;
+  color: var(--line); padding: 40px 0 40px 48px;
+  display: flex; align-items: flex-start;
+  border-right: 1px solid var(--line);
+  transition: color 0.3s;
+}
+.svc-row:hover .svc-row-num { color: var(--gold); }
+.svc-row-main { padding: 40px 48px; border-right: 1px solid var(--line); }
+.svc-row-title {
+  font-family: var(--serif); font-size: 1.5rem; font-weight: 400;
+  color: var(--ink); margin-bottom: 6px;
+}
+.svc-row-sub {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--gold);
+}
+.svc-row-desc {
+  padding: 40px 48px; font-size: 0.84rem; color: var(--smoke);
+  line-height: 1.9; border-right: 1px solid var(--line);
+}
+.svc-row-img {
+  overflow: hidden;
+}
+.svc-row-img img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(0.4) brightness(0.75);
+  transition: filter 0.5s, transform 0.7s;
+}
+.svc-row:hover .svc-row-img img { filter: saturate(0.65) brightness(0.9); transform: scale(1.04); }
+
+.svc-detail {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--line);
+}
+.svc-detail-img {
+  overflow: hidden; aspect-ratio: 4/3;
+}
+.svc-detail-img img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(0.45) brightness(0.78);
+  transition: transform 0.8s;
+}
+.svc-detail:hover .svc-detail-img img { transform: scale(1.03); }
+.svc-detail-body {
+  padding: 64px; background: var(--warm);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.svc-detail.flip { direction: rtl; }
+.svc-detail.flip > * { direction: ltr; }
+.svc-detail-body .svc-items { margin-top: 28px; display: flex; flex-direction: column; gap: 16px; }
+.svc-item {
+  padding: 18px 20px; border-left: 2px solid var(--gold); background: rgba(255,255,255,0.5);
+}
+.svc-item-title { font-size: 0.88rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.svc-item-desc { font-size: 0.78rem; color: var(--smoke); line-height: 1.75; }
+
+/* ══════════════════════════════════════════
+   ABOUT PAGE
+══════════════════════════════════════════ */
+.about-hero {
+  display: grid; grid-template-columns: 55% 45%;
+  min-height: 90vh;
+}
+.about-hero-img {
+  background: url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85&fit=crop') center/cover;
+  filter: saturate(0.45) brightness(0.8);
+  position: relative; overflow: hidden;
+}
+.about-hero-img::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to right, transparent 60%, var(--paper) 100%);
+}
+.about-hero-text {
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 80px 64px 80px 40px;
+}
+.about-year {
+  font-family: var(--serif); font-size: 10rem; font-weight: 400;
+  color: var(--ghost); line-height: 1; margin-bottom: -20px;
+  user-select: none;
+}
+.about-lead-text {
+  font-family: var(--serif); font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 400; line-height: 1.2; color: var(--ink); margin-bottom: 32px;
+}
+.about-lead-text em { font-style: italic; }
+.about-sub { font-size: 0.88rem; color: var(--smoke); line-height: 2; max-width: 420px; }
+
+.about-body-section {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--line);
+}
+.about-img-panel { overflow: hidden; }
+.about-img-panel img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: saturate(0.4) brightness(0.78);
+  transition: transform 0.8s;
+}
+.about-img-panel:hover img { transform: scale(1.03); }
+.about-copy-panel {
+  padding: 80px 64px; background: var(--warm);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.about-copy-panel p { font-size: 0.88rem; color: var(--smoke); line-height: 2.1; }
+.about-copy-panel p + p { margin-top: 20px; }
+
+.company-table-section { padding: 80px 48px; border-top: 1px solid var(--line); }
+.company-table-title {
+  font-family: var(--serif); font-size: 1.8rem; font-weight: 400;
+  color: var(--ink); margin-bottom: 48px;
+}
+.trow {
+  display: grid; grid-template-columns: 180px 1fr;
+  border-top: 1px solid var(--line); padding: 20px 0;
+}
+.trow:last-child { border-bottom: 1px solid var(--line); }
+.tkey {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--gold); padding-top: 3px;
+}
+.tval { font-size: 0.86rem; color: var(--ink); line-height: 1.9; }
+
+/* ══════════════════════════════════════════
+   CONTACT PAGE
+══════════════════════════════════════════ */
+.contact-layout {
+  display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh;
+}
+.contact-left {
+  background: var(--ink); padding: 140px 64px 80px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.contact-left-img {
+  position: absolute; inset: 0;
+  background: url('https://images.unsplash.com/photo-1516542076529-1ea3854896f2?w=900&q=80&fit=crop') center/cover;
+  filter: saturate(0.3) brightness(0.25); z-index: 0;
+}
+.contact-left-content { position: relative; z-index: 1; }
+.contact-left-title {
+  font-family: var(--serif); font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 400; line-height: 1.2; color: var(--paper); margin-bottom: 48px;
+}
+.contact-left-title em { font-style: italic; color: var(--gold); }
+.contact-info-items { display: flex; flex-direction: column; gap: 32px; }
+.ci-label {
+  font-family: var(--mono); font-size: 0.57rem; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 6px;
+}
+.ci-val { font-size: 0.86rem; color: rgba(245,242,236,0.6); line-height: 1.8; }
+.contact-left-bottom { position: relative; z-index: 1; }
+.contact-bottom-text {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: rgba(245,242,236,0.2);
+}
+
+.contact-right {
+  background: var(--paper); padding: 140px 64px 80px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.form-label {
+  display: block; font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke); margin-bottom: 10px;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%; background: transparent;
+  border: none; border-bottom: 1px solid var(--line);
+  padding: 12px 0; color: var(--ink);
+  font-family: var(--sans); font-size: 0.9rem; font-weight: 300;
+  outline: none; transition: border-color 0.3s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--gold); }
+.form-textarea { resize: vertical; min-height: 110px; }
+.form-select {
+  appearance: none; cursor: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235a5a5a' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0 center;
+}
+.form-select option { background: var(--paper); }
+.form-group { margin-bottom: 28px; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.submit-btn {
+  display: inline-flex; align-items: center; gap: 16px;
+  background: var(--ink); color: var(--paper); border: none;
+  padding: 16px 44px; font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.2em; text-transform: uppercase; cursor: none;
+  transition: all 0.3s; margin-top: 12px;
+}
+.submit-btn:hover { background: var(--gold); }
+
+/* ─── SHARED UTILS ─── */
+.section-label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.4em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 12px; display: block;
+}
+.page-title {
+  font-family: var(--serif); font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 400; line-height: 1.08; color: var(--ink);
+}
+.page-title em { font-style: italic; }
+
+/* ─── FOOTER ─── */
+.site-footer {
+  background: var(--ink); padding: 56px 48px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-inner {
+  display: flex; justify-content: space-between; align-items: center;
+  max-width: 1400px; margin: 0 auto;
+}
+.footer-logo {
+  font-family: var(--serif); font-size: 1.3rem; font-weight: 400;
+  letter-spacing: 0.08em; color: var(--paper);
+}
+.footer-logo .dot { color: var(--gold); }
+.footer-nav { display: flex; gap: 36px; list-style: none; }
+.footer-nav a {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: rgba(245,242,236,0.35);
+  text-decoration: none; cursor: none; transition: color 0.3s;
+}
+.footer-nav a:hover { color: var(--gold); }
+.footer-copy {
+  font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
+  color: rgba(245,242,236,0.2);
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes slowZoom {
+  from { transform: scale(1.04); } to { transform: scale(1); }
+}
+@keyframes pulse-line {
+  0%,100% { width: 36px; } 50% { width: 56px; opacity: 0.5; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); } to { transform: translateX(-50%); }
+}
+
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.9s cubic-bezier(.16,1,.3,1), transform 0.9s cubic-bezier(.16,1,.3,1);
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
+.rd1 { transition-delay: 0.08s; }
+.rd2 { transition-delay: 0.16s; }
+.rd3 { transition-delay: 0.24s; }
+
+/* ─── GRAIN OVERLAY ─── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 9000;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 120px;
+  opacity: 0.4; mix-blend-mode: multiply;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1024px) {
+  .ed-grid { display: block; }
+  .ed-feature, .ed-side { aspect-ratio: 16/9; }
+  .ed-text, .ed-text-2, .ed-text-3 { border: none; border-top: 1px solid var(--line); }
+  .svc-row { grid-template-columns: 60px 1fr; }
+  .svc-row-desc, .svc-row-img { display: none; }
+}
+
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; mix-blend-mode: normal; background: rgba(245,242,236,0.95); backdrop-filter: blur(12px); }
+  nav.dark { padding: 14px 24px; }
+  .nav-center, .nav-right { display: none; }
+  .hamburger { display: flex; }
+
+  .hero { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .hero-left { order: 2; padding: 0 24px 64px; min-height: 60vh; justify-content: flex-end; }
+  .hero-right { order: 1; height: 45vw; min-height: 200px; }
+  .hero-scroll { display: none; }
+
+  .intro { grid-template-columns: 1fr; padding: 64px 24px; gap: 24px; }
+  .intro-label { position: static; }
+
+  .ed-grid { display: flex; flex-direction: column; }
+  .ed-feature, .ed-side-1, .ed-side-2 { aspect-ratio: 16/10; }
+  .ed-text, .ed-text-2, .ed-text-3 { padding: 32px 24px; }
+
+  .statement { grid-template-columns: 1fr; padding: 64px 24px; }
+  .statement-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); padding-right: 0; padding-bottom: 48px; margin-bottom: 48px; }
+  .statement-right { padding-left: 0; }
+
+  .cta-strip { flex-direction: column; padding: 64px 24px; gap: 32px; }
+  .cta-strip-bg { display: none; }
+
+  .svc-hero { grid-template-columns: 1fr; }
+  .svc-hero-img { height: 40vw; }
+  .svc-hero-text { padding: 40px 24px; }
+  .svc-row { grid-template-columns: 48px 1fr; }
+  .svc-row-num { padding: 28px 0 28px 24px; font-size: 1.8rem; }
+  .svc-row-main, .svc-row-desc { padding: 28px 20px; }
+  .svc-row-desc, .svc-row-img { display: none; }
+  .svc-detail { grid-template-columns: 1fr; }
+  .svc-detail.flip { direction: ltr; }
+  .svc-detail-body { padding: 40px 24px; }
+
+  .about-hero { grid-template-columns: 1fr; }
+  .about-hero-img { height: 55vw; }
+  .about-hero-img::after { background: linear-gradient(to top, var(--paper) 0%, transparent 50%); }
+  .about-hero-text { padding: 32px 24px 64px; }
+  .about-year { font-size: 5rem; }
+  .about-body-section { grid-template-columns: 1fr; }
+  .about-img-panel { height: 55vw; }
+  .about-copy-panel { padding: 48px 24px; }
+  .company-table-section { padding: 48px 24px; }
+  .trow { grid-template-columns: 1fr; gap: 6px; }
+
+  .contact-layout { grid-template-columns: 1fr; }
+  .contact-left { padding: 100px 24px 56px; min-height: 50vh; }
+  .contact-right { padding: 56px 24px; }
+  .form-2col { grid-template-columns: 1fr; }
+
+  .site-footer { padding: 48px 24px; }
+  .footer-inner { flex-direction: column; gap: 24px; text-align: center; }
+  .footer-nav { flex-wrap: wrap; justify-content: center; gap: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo" onclick="go('home')">To<span class="dot">L</span></div>
+  <ul class="nav-center">
+    <li><a id="n-home" class="active" onclick="go('home')">Home</a></li>
+    <li><a id="n-service" onclick="go('service')">Service</a></li>
+    <li><a id="n-about" onclick="go('about')">Company</a></li>
+    <li><a id="n-contact" onclick="go('contact')">Contact</a></li>
+  </ul>
+  <button class="nav-right" onclick="go('contact')">お問い合わせ</button>
+  <button class="hamburger" id="hb" onclick="toggleMob()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mob-menu" id="mob-menu">
+  <a onclick="mgo('home')">Home</a>
+  <a onclick="mgo('service')">Service</a>
+  <a onclick="mgo('about')">Company</a>
+  <div class="mob-divider"></div>
+  <a onclick="mgo('contact')">Contact</a>
+  <button class="mob-cta" onclick="mgo('contact')" style="margin-top:24px;">お問い合わせ</button>
+</div>
+
+<!-- ══════════════════════════════════ HOME ══ -->
+<div id="pg-home" class="page active">
+
+  <div class="hero">
+    <div class="hero-left">
+      <p class="hero-eyebrow">Tokyo · Est. 2023</p>
+      <h1 class="hero-h1">Technology<br><em>of</em><br>Life.</h1>
+      <p class="hero-sub">ノーコード・GAS・業務自動化で複雑なビジネス課題をシンプルに解決するテクノロジーカンパニー。</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="go('service')">サービスを見る</button>
+        <button class="btn-text" onclick="go('about')">会社概要</button>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-img"></div>
+      <div class="hero-num">ToL</div>
+    </div>
+    <div class="hero-scroll">
+      <div class="hero-scroll-line"></div>
+      Scroll to explore
+    </div>
+  </div>
+
+  <!-- MARQUEE -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span class="marquee-item">Nocode Development<span>—</span></span>
+      <span class="marquee-item">Google Apps Script<span>—</span></span>
+      <span class="marquee-item">Business Outsourcing<span>—</span></span>
+      <span class="marquee-item">Webflow<span>—</span></span>
+      <span class="marquee-item">Bubble<span>—</span></span>
+      <span class="marquee-item">Workspace Automation<span>—</span></span>
+      <span class="marquee-item">東京<span>—</span></span>
+      <span class="marquee-item">Technology of Life<span>—</span></span>
+      <span class="marquee-item">Nocode Development<span>—</span></span>
+      <span class="marquee-item">Google Apps Script<span>—</span></span>
+      <span class="marquee-item">Business Outsourcing<span>—</span></span>
+      <span class="marquee-item">Webflow<span>—</span></span>
+      <span class="marquee-item">Bubble<span>—</span></span>
+      <span class="marquee-item">Workspace Automation<span>—</span></span>
+      <span class="marquee-item">東京<span>—</span></span>
+      <span class="marquee-item">Technology of Life<span>—</span></span>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <div class="intro reveal">
+    <div class="intro-label">Our Mission</div>
+    <div class="intro-body">
+      <p class="intro-lead">技術で、世界を<br><em>少しシンプルに。</em></p>
+      <p class="intro-text">従来の枠組みにとらわれず、常に進化するビジネス環境に適応し、革新的なアプローチでクライアントの課題に向き合います。ノーコード開発・GAS・業務アウトソーシングの3領域を核に、単なるサービス提供を超えた長期的なパートナーシップを築きます。</p>
+    </div>
+  </div>
+
+  <!-- EDITORIAL GRID -->
+  <div class="ed-grid">
+    <div class="ed-feature ed-cell reveal">
+      <img src="https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=1000&q=85&fit=crop" alt="Nocode">
+      <div class="ed-feature-caption">
+        <div class="ed-feature-num">01</div>
+        <div class="ed-feature-title">Nocode<br><em>Development</em></div>
+        <div class="ed-feature-tag">ノーコード開発</div>
+      </div>
+    </div>
+    <div class="ed-side ed-side-1 ed-cell reveal rd1">
+      <img src="https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=700&q=85&fit=crop" alt="GAS">
+      <div class="ed-side-caption">
+        <div class="ed-side-tag">02 — Google Apps Script</div>
+        <div class="ed-side-title">業務を<em>自動化</em>する</div>
+      </div>
+    </div>
+    <div class="ed-side ed-side-2 ed-cell reveal rd2">
+      <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=700&q=85&fit=crop" alt="BPO">
+      <div class="ed-side-caption">
+        <div class="ed-side-tag">03 — BPO & Consulting</div>
+        <div class="ed-side-title">上流から<em>伴走</em>する</div>
+      </div>
+    </div>
+    <div class="ed-text ed-cell reveal">
+      <div class="ed-text-num">01 / Nocode</div>
+      <div class="ed-text-title">コードレスで本番品質を実現する</div>
+      <div class="ed-text-body">Bubble・Adalo・Webflowを用い、従来比2〜5倍の速度で開発。MVPから業務システムまで対応。</div>
+      <div class="ed-tags"><span class="ed-tag">Bubble</span><span class="ed-tag">Webflow</span><span class="ed-tag">Studio</span></div>
+    </div>
+    <div class="ed-text-2 ed-cell reveal rd1">
+      <div class="ed-text-num">02 / GAS</div>
+      <div class="ed-text-title">Googleで全ての業務をつなぐ</div>
+      <div class="ed-text-body">スプレッドシート・Gmail・カレンダーを横断的に自動化。人的エラーと作業時間を劇的に削減。</div>
+      <div class="ed-tags"><span class="ed-tag">Google Sheet</span><span class="ed-tag">Workspace</span></div>
+    </div>
+    <div class="ed-text-3 ed-cell reveal rd2">
+      <div class="ed-text-num">03 / BPO</div>
+      <div class="ed-text-title">要件定義から運用まで一気通貫</div>
+      <div class="ed-text-body">「こんなことがしたい」を言語化しシステム設計へ。導入後の運用・改善まで伴走します。</div>
+      <div class="ed-tags"><span class="ed-tag">要件定義</span><span class="ed-tag">BPO</span></div>
+    </div>
+  </div>
+
+  <!-- STATEMENT -->
+  <div class="statement">
+    <div class="statement-left reveal">
+      <p class="statement-quote">革新的であることと、<br>信頼されることは<br><em>矛盾しない。</em></p>
+      <p class="statement-attr">ToL — Philosophy</p>
+    </div>
+    <div class="statement-right reveal rd1">
+      <img class="statement-img" src="https://images.unsplash.com/photo-1509395062183-67c5ad6faff9?w=800&q=80&fit=crop" alt="">
+      <p class="statement-text">クライアントの成功が私たちの成功。テクノロジーを手段として、ビジネスの本質的な課題を解決し続けます。リリースで終わらない、長期的なパートナーとして。</p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-strip">
+    <div class="cta-strip-bg"></div>
+    <div class="cta-strip-text reveal">
+      <p class="cta-strip-title">まずは、<em>相談から。</em></p>
+      <p class="cta-strip-sub">ご質問・資料請求・お見積もり、お気軽にどうぞ。</p>
+    </div>
+    <div class="cta-strip-btn reveal rd1">
+      <button class="btn-primary" onclick="go('contact')">お問い合わせはこちら →</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-logo">To<span class="dot">L</span></div>
+      <ul class="footer-nav">
+        <li><a onclick="go('home')">Home</a></li>
+        <li><a onclick="go('service')">Service</a></li>
+        <li><a onclick="go('about')">Company</a></li>
+        <li><a onclick="go('contact')">Contact</a></li>
+      </ul>
+      <div class="footer-copy">© 2023–2026 ToL LLC.</div>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════ SERVICE ══ -->
+<div id="pg-service" class="page">
+
+  <div class="svc-hero">
+    <div class="svc-hero-img"></div>
+    <div class="svc-hero-text">
+      <span class="section-label">Our Services</span>
+      <h1 class="page-title" style="color:var(--paper);">テクノロジーで<br><em>できること</em>、<br>全部やります。</h1>
+    </div>
+  </div>
+
+  <div class="svc-list reveal">
+    <div class="svc-row">
+      <div class="svc-row-num">01</div>
+      <div class="svc-row-main">
+        <div class="svc-row-title">Nocode Development</div>
+        <div class="svc-row-sub">ノーコード開発</div>
+      </div>
+      <div class="svc-row-desc">Bubble・Adalo・Webflowを活用し、従来の開発より圧倒的に短い期間・低コストでシステムを構築。MVPから業務システムまで幅広く対応します。</div>
+      <div class="svc-row-img"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&q=80&fit=crop" alt=""></div>
+    </div>
+    <div class="svc-row">
+      <div class="svc-row-num">02</div>
+      <div class="svc-row-main">
+        <div class="svc-row-title">Google Apps Script</div>
+        <div class="svc-row-sub">業務自動化</div>
+      </div>
+      <div class="svc-row-desc">GASでGoogleサービスを横断的に自動化。スプレッドシート・Gmail・カレンダーを連携させ、人的エラーと作業時間を劇的に削減します。</div>
+      <div class="svc-row-img"><img src="https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=400&q=80&fit=crop" alt=""></div>
+    </div>
+    <div class="svc-row">
+      <div class="svc-row-num">03</div>
+      <div class="svc-row-main">
+        <div class="svc-row-title">BPO & Consulting</div>
+        <div class="svc-row-sub">業務アウトソーシング</div>
+      </div>
+      <div class="svc-row-desc">要件定義の段階から伴走し、ツール選定・導入・運用まで一貫支援。本業に集中できる環境を整えます。</div>
+      <div class="svc-row-img"><img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&q=80&fit=crop" alt=""></div>
+    </div>
+  </div>
+
+  <div class="svc-detail reveal">
+    <div class="svc-detail-img"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&q=85&fit=crop" alt="Nocode"></div>
+    <div class="svc-detail-body">
+      <span class="section-label">01 — Nocode</span>
+      <h2 class="page-title" style="font-size:2rem;">Nocode<br><em>Development</em></h2>
+      <div class="svc-items">
+        <div class="svc-item"><div class="svc-item-title">Nocodeアプリ開発</div><div class="svc-item-desc">Bubble・Adalo・Glideを活用したネイティブ/Webアプリ。複雑なロジックも再現可能。</div></div>
+        <div class="svc-item"><div class="svc-item-title">Nocode Webサイト構築</div><div class="svc-item-desc">Webflow・Studioによる高品質なWebサイト制作。CMS対応も可能。</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="svc-detail flip reveal">
+    <div class="svc-detail-img"><img src="https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=900&q=85&fit=crop" alt="GAS"></div>
+    <div class="svc-detail-body">
+      <span class="section-label">02 — GAS</span>
+      <h2 class="page-title" style="font-size:2rem;">Google Apps<br><em>Script</em></h2>
+      <div class="svc-items">
+        <div class="svc-item"><div class="svc-item-title">Google Sheet 自動化</div><div class="svc-item-desc">データ集計・レポート生成・通知送信など繰り返し業務を完全自動化。</div></div>
+        <div class="svc-item"><div class="svc-item-title">Google Workspace 統合</div><div class="svc-item-desc">Gmail・Calendar・Driveを連携し、社内業務フローを最適化。</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="svc-detail reveal">
+    <div class="svc-detail-img"><img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=900&q=85&fit=crop" alt="BPO"></div>
+    <div class="svc-detail-body">
+      <span class="section-label">03 — BPO</span>
+      <h2 class="page-title" style="font-size:2rem;">BPO &amp;<br><em>Consulting</em></h2>
+      <div class="svc-items">
+        <div class="svc-item"><div class="svc-item-title">要件定義・コンサルティング</div><div class="svc-item-desc">「こんなことがしたい」を言語化し、最適なシステム設計に落とし込みます。</div></div>
+        <div class="svc-item"><div class="svc-item-title">業務アウトソーシング</div><div class="svc-item-desc">非コア業務を引き受け、本業に集中できる環境を整えます。</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-strip">
+    <div class="cta-strip-bg"></div>
+    <div class="cta-strip-text reveal"><p class="cta-strip-title">まず、<em>話しましょう。</em></p><p class="cta-strip-sub">どのサービスが適切か迷っている場合でも、お気軽にどうぞ。</p></div>
+    <div class="cta-strip-btn reveal rd1"><button class="btn-primary" onclick="go('contact')">無料相談を申し込む →</button></div>
+  </div>
+
+  <footer class="site-footer"><div class="footer-inner">
+    <div class="footer-logo">To<span class="dot">L</span></div>
+    <ul class="footer-nav"><li><a onclick="go('home')">Home</a></li><li><a onclick="go('service')">Service</a></li><li><a onclick="go('about')">Company</a></li><li><a onclick="go('contact')">Contact</a></li></ul>
+    <div class="footer-copy">© 2023–2026 ToL LLC.</div>
+  </div></footer>
+</div>
+
+<!-- ══════════════════════════════════ ABOUT ══ -->
+<div id="pg-about" class="page">
+
+  <div class="about-hero">
+    <div class="about-hero-img"></div>
+    <div class="about-hero-text">
+      <div class="about-year">23</div>
+      <h1 class="about-lead-text">世界を少し、<br><em>シンプルにする。</em></h1>
+      <p class="about-sub">「Technology of Life」の頭文字を冠する私たちは、テクノロジーが人々の生活と仕事をよりシンプルにするという信念のもとに行動しています。</p>
+    </div>
+  </div>
+
+  <div class="about-body-section">
+    <div class="about-img-panel"><img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80&fit=crop" alt=""></div>
+    <div class="about-copy-panel reveal">
+      <span class="section-label">Our Story</span>
+      <div class="about-body">
+        <p>合同会社ToLは2023年7月、東京・中央区に設立されました。ノーコード開発・Google Apps Script・業務アウトソーシングの3領域を核に、企業規模や業種を問わず、クライアントの固有の課題に向き合います。</p>
+        <p>私たちのアプローチは、単なるシステム納品ではなく、業務プロセス全体を俯瞰した上での最適解の提案です。革新的であることと、信頼されることは矛盾しない。</p>
+        <p>ToLは、常に最前線の技術を駆使しながら、クライアントと長期的なパートナーシップを築いていきます。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="company-table-section reveal">
+    <div class="company-table-title">会社概要</div>
+    <div class="trow"><div class="tkey">社名</div><div class="tval">合同会社ToL</div></div>
+    <div class="trow"><div class="tkey">代表</div><div class="tval">代表社員　田中 正崇</div></div>
+    <div class="trow"><div class="tkey">設立</div><div class="tval">2023年7月10日</div></div>
+    <div class="trow"><div class="tkey">所在地</div><div class="tval">〒104-0033　東京都中央区新川2-13-11-1201</div></div>
+    <div class="trow"><div class="tkey">事業内容</div><div class="tval">WEBサイトの企画・運営及び管理<br>コンピューターシステムを用いた受託開発<br>アウトソーシング業務の受託及び請負</div></div>
+    <div class="trow"><div class="tkey">ドメイン</div><div class="tval">tol.systems</div></div>
+  </div>
+
+  <footer class="site-footer"><div class="footer-inner">
+    <div class="footer-logo">To<span class="dot">L</span></div>
+    <ul class="footer-nav"><li><a onclick="go('home')">Home</a></li><li><a onclick="go('service')">Service</a></li><li><a onclick="go('about')">Company</a></li><li><a onclick="go('contact')">Contact</a></li></ul>
+    <div class="footer-copy">© 2023–2026 ToL LLC.</div>
+  </div></footer>
+</div>
+
+<!-- ══════════════════════════════════ CONTACT ══ -->
+<div id="pg-contact" class="page">
+  <div class="contact-layout">
+    <div class="contact-left">
+      <div class="contact-left-img"></div>
+      <div class="contact-left-content">
+        <span class="section-label" style="color:var(--gold);">Contact</span>
+        <h2 class="contact-left-title">あなたの課題を、<br><em>一緒に</em>解決しましょう。</h2>
+        <div class="contact-info-items">
+          <div><div class="ci-label">Email</div><div class="ci-val">info@tol.systems</div></div>
+          <div><div class="ci-label">Address</div><div class="ci-val">〒104-0033<br>東京都中央区新川2-13-11-1201</div></div>
+          <div><div class="ci-label">Response</div><div class="ci-val">原則2営業日以内にご返信いたします</div></div>
+        </div>
+      </div>
+      <div class="contact-left-bottom">
+        <div class="contact-bottom-text">ToL LLC — tol.systems</div>
+      </div>
+    </div>
+    <div class="contact-right">
+      <span class="section-label">Send Message</span>
+      <form onsubmit="handleForm(event)" style="margin-top:32px;">
+        <div class="form-2col">
+          <div class="form-group"><label class="form-label">お名前 *</label><input type="text" class="form-input" placeholder="田中 太郎" required></div>
+          <div class="form-group"><label class="form-label">会社名</label><input type="text" class="form-input" placeholder="株式会社○○"></div>
+        </div>
+        <div class="form-group"><label class="form-label">メールアドレス *</label><input type="email" class="form-input" placeholder="your@email.com" required></div>
+        <div class="form-group">
+          <label class="form-label">お問い合わせ種別</label>
+          <select class="form-select form-input">
+            <option value="">選択してください</option>
+            <option>Nocode開発について</option>
+            <option>Google Apps Script開発について</option>
+            <option>業務アウトソーシングについて</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">内容 *</label><textarea class="form-textarea" placeholder="ご要件・ご質問をお書きください..." required></textarea></div>
+        <button type="submit" class="submit-btn">送信する →</button>
+      </form>
+    </div>
+  </div>
+  <footer class="site-footer"><div class="footer-inner">
+    <div class="footer-logo">To<span class="dot">L</span></div>
+    <ul class="footer-nav"><li><a onclick="go('home')">Home</a></li><li><a onclick="go('service')">Service</a></li><li><a onclick="go('about')">Company</a></li><li><a onclick="go('contact')">Contact</a></li></ul>
+    <div class="footer-copy">© 2023–2026 ToL LLC.</div>
+  </div></footer>
+</div>
+
+<script>
+/* ── CURSOR ── */
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cur.style.left = mx+'px'; cur.style.top = my+'px'; });
+function animRing() {
+  rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+  ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+document.querySelectorAll('a, button, .ed-feature, .ed-side, .svc-row, .photo-strip-item').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('hover'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('hover'));
+});
+
+/* ── NAV ── */
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  nav.classList.toggle('dark', window.scrollY > 80);
+});
+
+/* ── MOBILE MENU ── */
+function toggleMob() {
+  const hb = document.getElementById('hb');
+  const mm = document.getElementById('mob-menu');
+  hb.classList.toggle('open');
+  mm.classList.toggle('open');
+  document.body.style.overflow = mm.classList.contains('open') ? 'hidden' : '';
+}
+function mgo(p) {
+  document.getElementById('hb').classList.remove('open');
+  document.getElementById('mob-menu').classList.remove('open');
+  document.body.style.overflow = '';
+  go(p);
+}
+
+/* ── PAGE ROUTING ── */
+function go(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('pg-'+p).classList.add('active');
+  document.querySelectorAll('.nav-center a').forEach(a => a.classList.remove('active'));
+  const na = document.getElementById('n-'+p);
+  if(na) na.classList.add('active');
+  window.scrollTo({top:0, behavior:'instant'});
+  // reset nav dark state
+  document.getElementById('navbar').classList.remove('dark');
+  setTimeout(reveal, 80);
+}
+
+/* ── SCROLL REVEAL ── */
+function reveal() {
+  document.querySelectorAll('.reveal:not(.in)').forEach(el => {
+    if(el.getBoundingClientRect().top < window.innerHeight - 60) el.classList.add('in');
+  });
+}
+window.addEventListener('scroll', reveal, {passive:true});
+setTimeout(reveal, 200);
+
+/* ── FORM ── */
+function handleForm(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('.submit-btn');
+  btn.textContent = '送信完了 ✓';
+  btn.style.background = '#3a7a4a';
+  setTimeout(() => { btn.textContent = '送信する →'; btn.style.background = ''; e.target.reset(); }, 3000);
+}
+</script>
+</body>
+</html>
